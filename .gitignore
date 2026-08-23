@@ -1,0 +1,7 @@
+node_modules/
+*.tsbuildinfo
+.DS_Store
+
+# lib/ is intentionally NOT ignored: the built bundle is committed so that
+# `dsh plugin add <git-url>` works without a deepseek-harness checkout.
+# Rebuild with `pnpm build` and commit the result when src/ changes.
