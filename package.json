@@ -1,7 +1,7 @@
 {
   "name": "dsh-plugin-archived-sessions",
   "version": "0.1.0",
-  "description": "Browse and reopen archived DeepSeek Harness sessions from a sidebar footer panel. Archiving in DSH hides a session from every grouping surface with no way back; this plugin gives those sessions a drawer you can open.",
+  "description": "Browse and read archived DeepSeek Harness sessions from a sidebar footer panel. Archiving in DSH hides a session from every grouping surface with no way back; this plugin gives those sessions a drawer and a read-only transcript reader.",
   "license": "MIT",
   "type": "module",
   "keywords": [
@@ -33,6 +33,7 @@
       "platform": "web",
       "inject": [
         "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-connection",
         "@deepseek-ai/dsh-client-locale",
         "@deepseek-ai/dsh-client-ui-sidebar"
       ]

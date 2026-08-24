@@ -33,6 +33,28 @@ export const css = {
   search: 'dsh-arch-search',
   searchRow: 'dsh-arch-searchRow',
   title: 'dsh-arch-title',
+  // Transcript viewer (the read-only reader this plugin opens on row click).
+  loadOlder: 'dsh-arch-loadOlder',
+  node: 'dsh-arch-node',
+  nodeAssistant: 'dsh-arch-nodeAssistant',
+  nodeBody: 'dsh-arch-nodeBody',
+  nodeContext: 'dsh-arch-nodeContext',
+  nodeHead: 'dsh-arch-nodeHead',
+  nodeReasoning: 'dsh-arch-nodeReasoning',
+  nodeRole: 'dsh-arch-nodeRole',
+  nodeTime: 'dsh-arch-nodeTime',
+  nodeTool: 'dsh-arch-nodeTool',
+  nodeUser: 'dsh-arch-nodeUser',
+  reader: 'dsh-arch-reader',
+  readerBody: 'dsh-arch-readerBody',
+  readerClose: 'dsh-arch-readerClose',
+  readerHead: 'dsh-arch-readerHead',
+  readerMask: 'dsh-arch-readerMask',
+  readerMeta: 'dsh-arch-readerMeta',
+  readerTitle: 'dsh-arch-readerTitle',
+  retry: 'dsh-arch-retry',
+  transcript: 'dsh-arch-transcript',
+  transcriptState: 'dsh-arch-transcriptState',
 } as const
 
 const SHEET = `/* Sidebar-foot archived-sessions action and the fixed list it opens above
@@ -251,6 +273,194 @@ const SHEET = `/* Sidebar-foot archived-sessions action and the fixed list it op
   color: var(--dsw-alias-label-tertiary);
   font-size: 11px;
   line-height: 15px;
+}
+
+/* ---- Read-only transcript reader ----------------------------------------
+   A plugin-owned overlay rather than the shell's conversation view: the core
+   projection sweep clears any archived session made current, so an archived
+   transcript can only be shown somewhere the sweep does not reach. */
+
+.dsh-arch-readerMask {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgb(0 0 0 / 45%);
+}
+
+.dsh-arch-reader {
+  display: flex;
+  flex-direction: column;
+  width: min(760px, 100%);
+  height: min(78vh, 100%);
+  overflow: hidden;
+  border: 1px solid var(--dsw-alias-border-inverted);
+  border-radius: 14px;
+  background: var(--dsw-specific-menu);
+  box-shadow: var(--dsw-shadow-lv3);
+}
+
+.dsh-arch-readerHead {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 14px 10px;
+  border-bottom: 1px solid var(--dsw-alias-border-inverted);
+}
+
+.dsh-arch-readerTitle {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--dsw-alias-label-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.dsh-arch-readerMeta {
+  flex: none;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+}
+
+.dsh-arch-readerClose {
+  flex: none;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  cursor: pointer;
+}
+
+.dsh-arch-readerClose:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.dsh-arch-readerBody {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.dsh-arch-transcript {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px;
+}
+
+.dsh-arch-transcriptState {
+  padding: 32px 16px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 13px;
+  text-align: center;
+}
+
+.dsh-arch-retry,
+.dsh-arch-loadOlder {
+  align-self: center;
+  margin-top: 10px;
+  padding: 6px 14px;
+  border: 1px solid var(--dsw-alias-border-inverted);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dsw-alias-label-primary);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.dsh-arch-retry:hover,
+.dsh-arch-loadOlder:hover:not(:disabled) {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.dsh-arch-loadOlder:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.dsh-arch-node {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-left: 10px;
+  border-left: 2px solid transparent;
+}
+
+.dsh-arch-nodeHead {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.dsh-arch-nodeRole {
+  color: var(--dsw-alias-label-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.dsh-arch-nodeTime {
+  margin-left: auto;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Transcripts are plain text here (no markdown pipeline in this plugin), so
+   the source's own line breaks are the only structure worth preserving. */
+.dsh-arch-nodeBody {
+  color: var(--dsw-alias-label-primary);
+  font-size: 13px;
+  line-height: 20px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.dsh-arch-nodeUser {
+  border-left-color: var(--dsw-alias-label-primary);
+}
+
+.dsh-arch-nodeAssistant {
+  border-left-color: var(--dsw-alias-border-inverted);
+}
+
+.dsh-arch-nodeReasoning {
+  border-left-color: var(--dsw-alias-border-inverted);
+}
+
+.dsh-arch-nodeReasoning .dsh-arch-nodeBody {
+  color: var(--dsw-alias-label-tertiary);
+  font-style: italic;
+}
+
+.dsh-arch-nodeContext .dsh-arch-nodeBody {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  /* Injected context can be enormous (whole instruction files); cap it so one
+     snapshot cannot push the whole conversation off the screen. */
+  max-height: 120px;
+  overflow: hidden;
+}
+
+.dsh-arch-nodeTool .dsh-arch-nodeRole {
+  color: var(--dsw-alias-label-tertiary);
+  font-weight: 500;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  text-transform: none;
 }
 `
 

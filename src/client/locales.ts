@@ -16,7 +16,17 @@ export const en = {
   close: 'Close',
   untitled: 'Untitled session',
   missing: 'This session is archived but is no longer in the session list.',
-  note: 'Opening an archived session does not restore it to the sidebar.',
+  note: 'Reading an archived session does not restore it to the sidebar.',
+  read: 'Read transcript',
+  loading: 'Loading…',
+  loadError: 'Could not read this session log.',
+  retry: 'Try again',
+  loadOlder: 'Load earlier messages',
+  transcriptEmpty: 'This session has no messages.',
+  toolCall: 'called',
+  contextNote: 'Injected context',
+  reasoningNote: 'Reasoning',
+  readOnly: 'Read-only',
 }
 
 /** Chinese strings (same key set as {@link en}). */
@@ -32,7 +42,17 @@ export const zh: typeof en = {
   close: '关闭',
   untitled: '未命名会话',
   missing: '该会话已归档，但已不在会话列表中。',
-  note: '打开已归档会话不会将其恢复到侧边栏。',
+  note: '查看已归档会话不会将其恢复到侧边栏。',
+  read: '查看记录',
+  loading: '加载中…',
+  loadError: '无法读取该会话日志。',
+  retry: '重试',
+  loadOlder: '加载更早的消息',
+  transcriptEmpty: '该会话没有消息。',
+  toolCall: '调用了',
+  contextNote: '注入的上下文',
+  reasoningNote: '推理过程',
+  readOnly: '只读',
 }
 
 /** One copy key in this namespace. */

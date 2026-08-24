@@ -1,14 +1,16 @@
 /** The registrant's business face handed to the panel component. */
-import type { SessionId } from '@deepseek-ai/dsh-client-runtime/client'
+import type { HistoryConnection } from './history.ts'
 
 /**
- * Injected share for the archived-sessions panel. Deliberately one action:
- * this plugin reads Host-published state and opens sessions, nothing else.
+ * Injected share for the archived-sessions panel.
+ *
+ * Just the wire handle: this plugin reads Host-published list state through
+ * standard props and reads session logs through `session.history`. It holds
+ * no session-mutating verb at all — notably not `sessions.open`, which
+ * cannot show an archived session (the core projection sweep reverts the
+ * selection; see `history.ts`).
  */
 export interface ArchivedPanelFace {
-  /**
-   * Select an archived session as current.
-   * @param sessionId - a session id resolved from the list store.
-   */
-  openSession: (sessionId: SessionId) => void
+  /** The `connection` service, carrying the `session.history` RPC. */
+  connection: HistoryConnection
 }

@@ -1,5 +1,5 @@
 /**
- * Sidebar-foot action listing every archived session, with click-to-open.
+ * Sidebar-foot action listing every archived session, with click-to-read.
  *
  * Data comes entirely from two standard props the `sidebar.footer.action`
  * slot already supplies: `useWorkspaces` carries the registry-global
@@ -7,16 +7,24 @@
  * list (the store keeps every row; the sidebar's own derivation is what
  * hides archived ones). Joining them locally reconstructs exactly the rows
  * the browser is refusing to draw — no new Host call, no extra wire traffic.
+ *
+ * Clicking a row opens a plugin-owned read-only transcript, NOT the shell's
+ * conversation view. That is a hard constraint rather than a preference: the
+ * core runtime's projection sweep clears any current selection that is in
+ * `archivedSessionIds`, so `sessions.open()` on an archived row is reverted
+ * before it can paint. See `history.ts` for the full explanation.
  */
 import { useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import {
-  IconArchiveOutline20, Tooltip, useAnchoredPosition, useDismissOnOutsidePointer,
+  IconArchiveOutline20, IconCloseOutline16, Tooltip,
+  useAnchoredPosition, useDismissOnOutsidePointer,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type { SessionId } from '@deepseek-ai/dsh-client-runtime/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
 import type { ArchivedPanelFace } from './face.ts'
+import { TranscriptView } from './TranscriptView.tsx'
 import { css } from './styles.ts'
 
 /** Full panel props composed by the sidebar footer-action slot. */
@@ -62,11 +70,12 @@ function shortDate(at: number): string {
 }
 
 export function ArchivedSessionsPanel({
-  wide, useSessions, useWorkspaces, openSession, t,
+  wide, useSessions, useWorkspaces, connection, t,
 }: ArchivedSessionsPanelProps) {
   const archivedSessionIds = useWorkspaces(state => state.archivedSessionIds)
   const byId = useSessions(state => state.byId)
   const [open, setOpen] = useState(false)
+  const [reading, setReading] = useState<ArchivedRow | null>(null)
   const [query, setQuery] = useState('')
   const rootRef = useRef<HTMLDivElement | null>(null)
   const triggerRef = useRef<HTMLButtonElement | null>(null)
@@ -104,11 +113,12 @@ export function ArchivedSessionsPanel({
   const label = t('nav')
   const total = rows.length
 
-  // A row the session list no longer carries cannot be opened: `sessions.open`
-  // fails loud on an unknown id, so the row stays visible but inert.
+  // A row the session list no longer carries stays visible but inert: its
+  // log may be gone from disk entirely, and the list is the only evidence
+  // this client has either way.
   const onRowClick = (row: ArchivedRow): void => {
     if (row.missing) return
-    openSession(row.id)
+    setReading(row)
     setOpen(false)
   }
 
@@ -171,7 +181,7 @@ export function ArchivedSessionsPanel({
                   type="button"
                   className={css.row}
                   disabled={row.missing}
-                  title={row.missing ? t('missing') : t('open')}
+                  title={row.missing ? t('missing') : t('read')}
                   onClick={() => { onRowClick(row) }}
                 >
                   <span className={css.rowTitle}>{row.title}</span>
@@ -185,6 +195,34 @@ export function ArchivedSessionsPanel({
           </div>
 
           {total > 0 ? <div className={css.note}>{t('note')}</div> : null}
+        </div>
+      ) : null}
+
+      {reading !== null ? (
+        <div
+          className={css.readerMask}
+          role="presentation"
+          // Mask-only dismiss: a click inside the card must not close it, and
+          // the transcript is selectable text people will drag across.
+          onClick={(event) => { if (event.target === event.currentTarget) setReading(null) }}
+        >
+          <div className={css.reader} role="dialog" aria-modal="true" aria-label={reading.title}>
+            <div className={css.readerHead}>
+              <span className={css.readerTitle}>{reading.title}</span>
+              <span className={css.readerMeta}>{t('readOnly')}</span>
+              <button
+                type="button"
+                className={css.readerClose}
+                aria-label={t('close')}
+                onClick={() => { setReading(null) }}
+              >
+                <IconCloseOutline16 size={14} />
+              </button>
+            </div>
+            <div className={css.readerBody}>
+              <TranscriptView sessionId={reading.id} connection={connection} t={t} />
+            </div>
+          </div>
         </div>
       ) : null}
     </div>
