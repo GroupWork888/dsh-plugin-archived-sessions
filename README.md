@@ -4,6 +4,8 @@ Browse and read archived [DeepSeek Harness](https://github.com/deepseek-ai/deeps
 
 Archiving a session in DSH hides it from every grouping surface — the workspace tree, the flat list, and search. The session log is kept, but the UI ships no way back: there is no unarchive action, no "show archived" toggle, and no way to reach an archived session once it disappears. This plugin gives those sessions a drawer, and a reader.
 
+> **This is a viewer, not an unarchive button.** Clicking a session opens a read-only transcript inside the panel — it does not restore the session to the sidebar, and it does not reopen it in the main chat view so you can keep talking to it. Both of those need harness changes a plugin cannot make; [the reasons are exact and worth reading](#what-it-deliberately-does-not-do) if you were hoping otherwise.
+
 <!-- A screenshot belongs here once the panel is captured in a real profile. -->
 
 ## What it does
