@@ -95,14 +95,22 @@ To remove it, drop the bundle from `dsh.profile.bundles` in the profile's `packa
 ## Develop
 
 ```sh
-pnpm install      # links against a local deepseek-harness checkout
+pnpm install      # no harness checkout required
 pnpm build        # emits lib/index.js (node half) and lib/client.js (browser half)
-pnpm typecheck    # typecheck against the real DSH contracts
 pnpm test         # load the BUILT bundle in jsdom and drive the panel
-pnpm verify       # all three
+pnpm verify       # build + test — works anywhere
 ```
 
-The dev dependencies use `link:` paths into a `deepseek-harness` checkout; point them at your own before building. The checkout is only ever read — as a type reference and a source of shared packages.
+**You do not need a `deepseek-harness` checkout to hack on this.** The `link:` dev dependencies point at one, but they are type-only: `pnpm install`, `pnpm build`, and `pnpm test` all succeed with those links dangling, and the resulting `lib/client.js` is byte-identical to one built with the checkout present (verified). The checkout is only ever read, never written.
+
+The one thing that needs it is type resolution:
+
+```sh
+pnpm typecheck     # requires ../deepseek-harness (else ~5 cannot-find-module errors)
+pnpm verify:types  # build + typecheck + test
+```
+
+If you want it, clone the harness as a sibling directory (`../deepseek-harness`) or repoint the `link:` paths in `package.json`. Worth doing before sending a PR — it typechecks against the real DSH contracts and catches wrong prop names and missing locale declarations that a build will happily emit.
 
 `tests/smoke.mjs` executes `lib/client.js` through a fake `__ModuleLoader__` whose `require` answers exactly the shared module table the web shell provides, then renders the registered component and drives a full read. That catches what a typecheck cannot: registering under the wrong id, requesting a module the loader cannot answer, filling the wrong slot, mis-sorting rows, duplicating replies from stream chunks, mislabelling injected context as a human prompt, paging from the wrong cursor — and, above all, reaching for the sessions service, which is the exact bug that made an earlier version's rows unclickable.
 

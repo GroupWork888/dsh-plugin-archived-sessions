@@ -43,7 +43,8 @@
     "build": "tsdown",
     "typecheck": "tsc -p tsconfig.json",
     "test": "node tests/smoke.mjs",
-    "verify": "pnpm build && pnpm typecheck && pnpm test"
+    "verify": "pnpm build && pnpm test",
+    "verify:types": "pnpm build && pnpm typecheck && pnpm test"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "^4.0.1"
