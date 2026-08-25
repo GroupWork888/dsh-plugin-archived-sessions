@@ -6,11 +6,15 @@ Archiving a session in DSH hides it from every grouping surface — the workspac
 
 > **This is a viewer, not an unarchive button.** Clicking a session opens a read-only transcript inside the panel — it does not restore the session to the sidebar, and it does not reopen it in the main chat view so you can keep talking to it. Both of those need harness changes a plugin cannot make; [the reasons are exact and worth reading](#what-it-deliberately-does-not-do) if you were hoping otherwise.
 
-<!-- A screenshot belongs here once the panel is captured in a real profile. -->
+![The archived-sessions panel, listing archived sessions with a search box](docs/panel.png)
 
 ## What it does
 
-Adds an **Archived** entry beside Settings at the foot of the sidebar. Opening it shows every archived session, newest activity first, with:
+Adds an **Archived** entry beside Settings at the foot of the sidebar, with a live count of how many sessions are hidden there:
+
+![The Archived entry at the sidebar foot, showing a count of 53](docs/sidebar-entry.png)
+
+Opening it shows every archived session, newest activity first, with:
 
 - title and workspace for each row, plus a search box to filter them
 - click a row to read that session's transcript in a read-only reader
@@ -18,6 +22,10 @@ Adds an **Archived** entry beside Settings at the foot of the sidebar. Opening i
 - a live count on the trigger
 - English and Chinese copy, following the app's active language
 - theme-aware styling via the shell's own design tokens
+
+Clicking a row opens that session's transcript in a read-only reader:
+
+![The read-only transcript reader, showing a prompt and labelled injected context](docs/reader.png)
 
 The reader shows human prompts, assistant replies, reasoning, injected context (labelled and clamped), and the names of tools that were called. It is plain text: no markdown rendering and no tool cards, because those surfaces live in the shell's conversation packages and reproducing them here would mean vendoring code this plugin does not own.
 
