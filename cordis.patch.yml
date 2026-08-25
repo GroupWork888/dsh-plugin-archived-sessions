@@ -4,9 +4,9 @@
 # half — the "Archived" sidebar footer panel, which is the entire feature — is
 # discovered automatically from the `dsh.client` declaration in package.json.
 #
-# The node half is deliberately inert: this plugin reads the archive set the
-# Host already publishes to every client and opens sessions through the
-# existing sessions service. It registers no Host services and writes nothing.
+# The node half is deliberately inert: the browser reads the archive set the
+# Host already publishes and fetches archived logs through `session.history`.
+# It never opens a session as current, registers no Host services, and writes nothing.
 - insert:
     - id: archived-sessions
       name: dsh-plugin-archived-sessions
