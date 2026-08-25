@@ -82,15 +82,17 @@ So the rows are already sitting in your browser; this plugin draws them, and pag
 ## Install
 
 ```sh
-dsh plugin --profile web add dsh-plugin-archived-sessions
+dsh plugin --profile web add https://github.com/GroupWork888/dsh-plugin-archived-sessions
 ```
 
-Then restart `dsh web` and refresh the page. From a local checkout:
+Then restart `dsh web` and refresh the page. That is the whole install: the built bundle is committed, so there is no build step and you do not need a `deepseek-harness` checkout.
+
+From a local clone instead, if you want to read or change the source:
 
 ```sh
-git clone https://github.com/<you>/dsh-plugin-archived-sessions
-cd dsh-plugin-archived-sessions && pnpm install && pnpm build
-dsh plugin --profile web add /absolute/path/to/dsh-plugin-archived-sessions
+git clone https://github.com/GroupWork888/dsh-plugin-archived-sessions
+cd dsh-plugin-archived-sessions && pnpm install
+dsh plugin --profile web add "$PWD"
 ```
 
 Installing writes only to `$DSH_HOME/profiles/web` (its `package.json`, `node_modules`, and lockfile). Nothing in the harness checkout is modified.
