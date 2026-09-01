@@ -12,8 +12,11 @@
  * own — and an archived session has nothing to send to anyway.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { SessionId } from '@deepseek-ai/dsh-api-remotes/client'
 import type { TranscriptNode } from './history.ts'
-import { loadTranscript, type HistoryConnection } from './history.ts'
+import {
+  loadOlderTranscript, loadTranscriptTail, type HistoryRemote,
+} from './history.ts'
 import { css } from './styles.ts'
 
 /** Copy accessor supplied by the panel (already bound to this namespace). */
@@ -22,9 +25,9 @@ type Translate = (key: 'loading' | 'loadError' | 'retry' | 'loadOlder'
 
 export interface TranscriptViewProps {
   /** Archived session to read. */
-  sessionId: string
-  /** Resolved connection service carrying the `session.history` RPC. */
-  connection: HistoryConnection
+  sessionId: SessionId
+  /** Generated read-only Session Remote namespace. */
+  history: HistoryRemote
   /** Bound copy accessor. */
   t: Translate
 }
@@ -44,12 +47,13 @@ const KIND_CLASS: Record<TranscriptNode['kind'], string> = {
   context: css.nodeContext,
 }
 
-export function TranscriptView({ sessionId, connection, t }: TranscriptViewProps) {
+export function TranscriptView({ sessionId, history, t }: TranscriptViewProps) {
   const [nodes, setNodes] = useState<TranscriptNode[]>([])
   const [phase, setPhase] = useState<'loading' | 'ready' | 'error'>('loading')
   const [hasMore, setHasMore] = useState(false)
   const [loadingOlder, setLoadingOlder] = useState(false)
   const firstSeq = useRef<number | undefined>(undefined)
+  const throughSeq = useRef<number | undefined>(undefined)
   // Guards against a resolved page from a previous session landing after the
   // viewer already moved to another row.
   const generation = useRef(0)
@@ -59,12 +63,14 @@ export function TranscriptView({ sessionId, connection, t }: TranscriptViewProps
     setPhase('loading')
     setNodes([])
     firstSeq.current = undefined
-    loadTranscript(connection, sessionId).then(
+    throughSeq.current = undefined
+    loadTranscriptTail(history, sessionId).then(
       (page) => {
         if (generation.current !== mine) return
         setNodes(page.nodes)
         setHasMore(page.hasMore)
         firstSeq.current = page.firstSeq
+        throughSeq.current = page.throughSeq
         setPhase('ready')
       },
       (reason: unknown) => {
@@ -73,16 +79,17 @@ export function TranscriptView({ sessionId, connection, t }: TranscriptViewProps
         setPhase('error')
       },
     )
-  }, [connection, sessionId])
+  }, [history, sessionId])
 
   useEffect(() => { loadTail() }, [loadTail])
 
   const onLoadOlder = (): void => {
     const cursor = firstSeq.current
-    if (cursor === undefined || loadingOlder) return
+    const cut = throughSeq.current
+    if (cursor === undefined || cut === undefined || loadingOlder) return
     const mine = generation.current
     setLoadingOlder(true)
-    loadTranscript(connection, sessionId, cursor).then(
+    loadOlderTranscript(history, sessionId, cut, cursor).then(
       (page) => {
         if (generation.current !== mine) return
         setNodes(previous => [...page.nodes, ...previous])

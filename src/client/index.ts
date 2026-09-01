@@ -12,9 +12,8 @@
  * - `sidebar.footer.action` is a `list` slot and supplies both `useSessions`
  *   and `useWorkspaces` as standard props, which is exactly the pair this
  *   panel needs to reconstruct those rows.
- * - `session.history` reads a session log from persistence and explicitly
- *   "never resumes or publishes an Agent", so a viewer can page an archived
- *   transcript without waking anything up.
+ * - `session.follow` and `session.page` read the durable log without resuming
+ *   or publishing an Agent, so the viewer cannot wake the archived session.
  *
  * Why the transcript is plugin-owned rather than the shell's chat view:
  * `WorkspaceRuntime.project()` clears any current selection contained in
@@ -32,6 +31,10 @@
  * private, and the workspace storage domain is exclusively held).
  */
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
+// Type-only: supplies ctx.remote and the generated namespace assembly.
+import type {} from '@deepseek-ai/dsh-api-remotes/client'
+// Type-only: supplies the generated Session Remote namespace declarations.
+import type {} from '@deepseek-ai/dsh-api-session-controller/remote'
 // Type-only: pulls the slot registry's Context merge (ctx.slots).
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 // Type-only: pulls in the SlotMap merge declaring `sidebar.footer.action`.
@@ -44,16 +47,14 @@ import type {} from '@deepseek-ai/dsh-client-ui-session/client'
 import type {} from '@deepseek-ai/dsh-client-ui-workspace/client'
 import { ArchivedSessionsPanel } from './ArchivedSessionsPanel.tsx'
 import type { ArchivedPanelFace } from './face.ts'
-import type { HistoryConnection } from './history.ts'
 import { en, NS, zh } from './locales.ts'
 import { installStyles } from './styles.ts'
 
 /**
- * Required client services. `connection` carries the wire client; the
- * sessions service is no longer needed, because this plugin deliberately
- * never changes the current session.
+ * Required client services. The sessions object layer is not needed because
+ * this plugin deliberately never changes the current session.
  */
-export const inject = ['slots', 'connection', 'locale']
+export const inject = ['slots', 'remote', 'remote.session', 'locale']
 
 /**
  * Mount the archived-sessions footer action.
@@ -71,12 +72,8 @@ export function apply(ctx: ClientContext): void {
     order: 50,
     locale: NS,
     label: () => ctx.locale.bind(NS)('nav'),
-    // `connection` is published by the client connection plugin but declares
-    // no Context merge, so it is read through `get` like the core runtime
-    // does. Resolved per render pass, not captured at mount, so a rebuilt
-    // handle is picked up.
     inject: (): ArchivedPanelFace => ({
-      connection: ctx.get('connection') as unknown as HistoryConnection,
+      history: ctx.remote.session,
     }),
   }, ArchivedSessionsPanel))
 }

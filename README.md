@@ -49,7 +49,7 @@ if (sessions.current !== undefined
 
 That sweep is deliberate core behaviour — it is how the UI drops a session that another tab just archived, and how a reconnect discards a stale persisted selection. It is not a bug to route around from a plugin, and it fires on every projection rather than only on archive events, so no amount of plugin-side sequencing survives it.
 
-So this plugin does not make archived sessions current at all. It reads the log directly through the `session.history` RPC — whose contract states it "uses an attached Session or persistence inspection and never resumes or publishes an Agent" — and renders the transcript in its own overlay. `tests/smoke.mjs` asserts the plugin never touches the sessions service, so this cannot silently regress.
+So this plugin does not make archived sessions current at all. It reads the durable log through `session.follow` and `session.page`, then renders the transcript in its own overlay. `tests/smoke.mjs` asserts the plugin never touches the sessions service, so this cannot silently regress.
 
 Making archived sessions genuinely openable is a ~5-line upstream change: make the sweep transition-based (clear when the archive set *changes* to include the current session) instead of state-based. That preserves all three documented sweep cases while letting a deliberate open stick.
 
@@ -71,13 +71,13 @@ Rows whose session has left the session list entirely are shown but disabled: th
 - `workspace.list` already ships `archivedSessionIds` to every client as ordinary data
 - the session list is never filtered host-side — the store carries every row, and the sidebar's own derivation is what hides archived ones at render time
 - `sidebar.footer.action` is a `list` slot that supplies both `useSessions` and `useWorkspaces` as standard props
-- `session.history` reads a log from persistence without waking an agent
+- `session.follow` and `session.page` read a log from persistence without waking an agent
 
 So the rows are already sitting in your browser; this plugin draws them, and pages the log for the one you pick. It is strictly read-only: it never calls `archiveSession`, never changes the current session, and never writes host state. The node half is deliberately empty.
 
 ### A note on page size
 
-`session.history` returns every raw event, and `assistant/chunk` dominates a real log by roughly 20:1 — one measured tool-heavy session returned 6,239 events for a 60-message page, 5,917 of them chunks that this viewer folds away. That is 1.7 MB transferred to render 109 lines. The page size is therefore 30 rather than the shell's 60 (0.84 MB for 50 lines). Loopback hides the difference; a Tailscale-reached web UI does not.
+Session history pages return every raw event, and `assistant/chunk` dominates a real log by roughly 20:1 — one measured tool-heavy session returned 6,239 events for a 60-message page, 5,917 of them chunks that this viewer folds away. That is 1.7 MB transferred to render 109 lines. The page size is therefore 30 rather than the shell's 60 (0.84 MB for 50 lines). Loopback hides the difference; a Tailscale-reached web UI does not.
 
 ## Install
 
@@ -111,7 +111,7 @@ To remove it, run `dsh plugin --profile web remove dsh-plugin-archived-sessions`
 ## Requirements
 
 - A DSH `web` profile. The panel is browser-only.
-- Built against the `0.1.1-rc.2` client packages. The slot contract it uses (`sidebar.footer.action`) is a declared extension seam, but DSH is pre-1.0 and seams may move between releases.
+- Built against the `0.1.2-alpha.1` client packages. The slot contract it uses (`sidebar.footer.action`) is a declared extension seam, but DSH is pre-1.0 and seams may move between releases.
 
 ## Develop
 
@@ -135,7 +135,7 @@ If you want it, clone the harness as a sibling directory (`../deepseek-harness`)
 
 `tests/smoke.mjs` executes `lib/client.js` through a fake `__ModuleLoader__` whose `require` answers exactly the shared module table the web shell provides, then renders the registered component and drives a full read. That catches what a typecheck cannot: registering under the wrong id, requesting a module the loader cannot answer, filling the wrong slot, mis-sorting rows, duplicating replies from stream chunks, mislabelling injected context as a human prompt, paging from the wrong cursor — and, above all, reaching for the sessions service, which is the exact bug that made an earlier version's rows unclickable.
 
-Note that `@deepseek-ai/dsh-client-connection` is **not** in the shell's shared module table (`PLATFORM_MODULES`), so the wire types are declared structurally in `src/client/history.ts` and the service is resolved at runtime with `ctx.get('connection')`. A value import of that package would not resolve in the browser.
+The history types are type-only imports from the Remote assembly and Session controller, so the built browser bundle adds no value import that must be present in the shell's shared module table.
 
 ## License
 

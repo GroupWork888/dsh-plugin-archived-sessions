@@ -21,7 +21,7 @@ import {
   useAnchoredPosition, useDismissOnOutsidePointer,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import type { SessionId } from '@deepseek-ai/dsh-client-connection/client'
+import type { SessionId } from '@deepseek-ai/dsh-api-remotes/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
 import type { ArchivedPanelFace } from './face.ts'
 import { TranscriptView } from './TranscriptView.tsx'
@@ -70,7 +70,7 @@ function shortDate(at: number): string {
 }
 
 export function ArchivedSessionsPanel({
-  wide, useSessions, useWorkspaces, connection, t,
+  wide, useSessions, useWorkspaces, history, t,
 }: ArchivedSessionsPanelProps) {
   const archivedSessionIds = useWorkspaces(state => state.archivedSessionIds)
   const byId = useSessions(state => state.byId)
@@ -220,7 +220,7 @@ export function ArchivedSessionsPanel({
               </button>
             </div>
             <div className={css.readerBody}>
-              <TranscriptView sessionId={reading.id} connection={connection} t={t} />
+              <TranscriptView sessionId={reading.id} history={history} t={t} />
             </div>
           </div>
         </div>

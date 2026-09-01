@@ -4,7 +4,7 @@
  * Deliberately inert. Everything this plugin does happens in the browser
  * (see src/client/index.ts): it reads the archive set the Host already
  * publishes to every client, then reads archived logs through the existing
- * `session.history` RPC. There is no Host-side state to own and nothing to write.
+ * generated Session Remote. There is no Host-side state to own and nothing to write.
  *
  * This entry exists so the bundle has a loadable row; keeping it empty is
  * what makes the plugin safe to install and trivial to remove.

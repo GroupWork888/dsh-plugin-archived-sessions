@@ -13,7 +13,7 @@
  * So the selection is reverted before React paints and the click looks dead.
  * That sweep is deliberate core behaviour (it is how a session archived in
  * another tab stops being shown), so this plugin does not fight it: it reads
- * the session log directly through the `session.history` RPC and renders the
+ * the session log directly through the Session Remote and renders the
  * transcript inside its own panel, leaving the shell's current session alone.
  *
  * The RPC is served straight from the durable log — its own contract states
@@ -21,12 +21,14 @@
  * and never resumes or publishes an Agent", which is exactly the guarantee a
  * viewer for archived sessions needs.
  *
- * Types here are declared structurally rather than imported from
- * `@deepseek-ai/dsh-client-connection`: that package is NOT in the shell's
- * shared module table (see `PLATFORM_MODULES`), so a value import would not
- * resolve at runtime. Narrow local shapes keep the plugin honest about the
- * small slice of the wire contract it actually reads.
+ * The Remote and history vocabulary are imported as types only, so they add
+ * no browser module-table dependency to the built plugin.
  */
+
+import type { ClientRemote, SessionId } from '@deepseek-ai/dsh-api-remotes/client'
+import type {
+  SessionHistoryRecord, SessionPage, SessionFollowFrame,
+} from '@deepseek-ai/dsh-api-session-controller/types'
 
 /** One history page entry: the raw persisted event (the `view` slot is unused here). */
 export interface HistoryEvent {
@@ -36,37 +38,12 @@ export interface HistoryEvent {
   data?: unknown
 }
 
-/** The `session.history` response slice this viewer consumes. */
-interface HistoryValue {
-  events: { event: HistoryEvent }[]
-  hasMore: boolean
-}
-
-/** RPC envelope: business failures ride `result`, never a thrown error. */
-type RpcResponse<T> =
-  | { result: { ok: true; value: T } }
-  | { result: { ok: false; error: { code: string; message: string } } }
-
-/**
- * The single wire method this plugin calls, structurally typed. Resolved via
- * `ctx.get('connection')` because the client connection package publishes no
- * `Context` merge (the core runtime reaches it the same way).
- */
-export interface HistoryConnection {
-  api: {
-    sessions: {
-      history(payload: {
-        sessionId: string
-        beforeSeq?: number
-        maxMessages?: number
-      }): Promise<RpcResponse<HistoryValue>>
-    }
-  }
-}
+/** Generated Session Remote namespace used for cold-safe history reads. */
+export type HistoryRemote = ClientRemote['session']
 
 /**
  * Messages per page. Deliberately smaller than the shell's own 60-message
- * window: `session.history` returns every raw event, and `assistant/chunk`
+ * window: history pages return every raw event, and `assistant/chunk`
  * dominates a real log by roughly 20:1 (one measured tool-heavy session:
  * 6,239 events per 60-message page, 5,917 of them chunks). This viewer folds
  * chunks away, so those bytes are transferred only to be discarded.
@@ -96,6 +73,8 @@ export interface TranscriptNode {
 export interface TranscriptPage {
   nodes: TranscriptNode[]
   hasMore: boolean
+  /** Inclusive log cut held stable while older pages are loaded. */
+  throughSeq: number
   /** Seq of the page's first event — the `beforeSeq` for the next older page. */
   firstSeq: number | undefined
 }
@@ -162,27 +141,81 @@ export function foldTranscript(events: readonly HistoryEvent[]): TranscriptNode[
 }
 
 /**
- * Pull one page of an archived session's transcript.
- * @param connection - the resolved `connection` service.
- * @param sessionId - archived session to read.
- * @param beforeSeq - page backwards from this seq; omitted reads the tail.
+ * Convert one wire history page into the reader's projection.
+ * @param records - raw events and packed chunk runs.
+ * @param hasMore - whether an older page exists.
+ * @param throughSeq - stable inclusive cut for subsequent pages.
  * @returns the folded page.
- * @throws when the RPC reports a business error or the transport fails.
  */
-export async function loadTranscript(
-  connection: HistoryConnection,
-  sessionId: string,
-  beforeSeq?: number,
-): Promise<TranscriptPage> {
-  const payload = beforeSeq === undefined
-    ? { sessionId, maxMessages: PAGE_MESSAGES }
-    : { sessionId, beforeSeq, maxMessages: PAGE_MESSAGES }
-  const { result } = await connection.api.sessions.history(payload)
-  if (!result.ok) throw new Error(`${result.error.code}: ${result.error.message}`)
-  const events = result.value.events.map(entry => entry.event)
+function transcriptPage(
+  records: readonly SessionHistoryRecord[],
+  hasMore: boolean,
+  throughSeq: number,
+): TranscriptPage {
+  const events = records
+    .filter(record => record.type === 'event')
+    .map(record => record.event as HistoryEvent)
   return {
     nodes: foldTranscript(events),
-    hasMore: result.value.hasMore,
+    hasMore,
+    throughSeq,
     firstSeq: events[0]?.seq,
   }
+}
+
+/**
+ * Open an archived session's current transcript window.
+ * @param remote - generated Session Remote namespace.
+ * @param sessionId - archived session to read.
+ * @returns the folded page.
+ * @throws when the stream closes without its required opening snapshot.
+ */
+export async function loadTranscriptTail(
+  remote: HistoryRemote,
+  sessionId: SessionId,
+): Promise<TranscriptPage> {
+  const controller = new AbortController()
+  try {
+    for await (const frame of remote.follow({
+      address: { kind: 'session', sessionId },
+      maxMessages: PAGE_MESSAGES,
+    }, controller.signal)) {
+      if (frame.type !== 'snapshot') {
+        throw new Error('session.follow did not begin with a snapshot')
+      }
+      return transcriptPage(frame.records, frame.hasMore, frame.cursor)
+    }
+    throw new Error('session.follow closed before its opening snapshot')
+  } finally {
+    controller.abort()
+  }
+}
+
+/**
+ * Load one older transcript page against the opening snapshot's stable cut.
+ * @param remote - generated Session Remote namespace.
+ * @param sessionId - archived session to read.
+ * @param throughSeq - inclusive cut returned by the opening snapshot.
+ * @param beforeSeq - page backwards from this sequence.
+ * @returns the folded page.
+ * @throws when the Remote reports a business or carrier error.
+ */
+export async function loadOlderTranscript(
+  remote: HistoryRemote,
+  sessionId: SessionId,
+  throughSeq: number,
+  beforeSeq: number,
+): Promise<TranscriptPage> {
+  const result = await remote.page({
+    address: { kind: 'session', sessionId },
+    throughSeq,
+    beforeSeq,
+    maxMessages: PAGE_MESSAGES,
+  })
+  if (!result.ok) throw new Error(`${result.error.code}: ${result.error.message}`)
+  return transcriptPage(
+    (result.value as SessionPage).records,
+    (result.value as SessionPage).hasMore,
+    throughSeq,
+  )
 }

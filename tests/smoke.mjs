@@ -85,7 +85,8 @@ new dom.window.Function(readFileSync(bundlePath, 'utf8'))()
 
 assert.equal(registered.id, 'dsh-plugin-archived-sessions', 'registers under its package id')
 const plugin = registered.exports
-assert.deepEqual(plugin.inject, ['slots', 'connection', 'locale'], 'declares its service edges')
+assert.deepEqual(plugin.inject, ['slots', 'remote', 'remote.session', 'locale'],
+  'declares its service edges')
 
 // --- fake client context -------------------------------------------------
 /** Raw events shaped exactly like a real archived session log. */
@@ -108,25 +109,37 @@ const LOG = [
 ]
 
 const historyCalls = []
-const connection = {
-  api: {
-    sessions: {
-      history: (payload) => {
-        historyCalls.push(payload)
-        // Page 2 (beforeSeq set) returns the older half.
-        if (payload.beforeSeq !== undefined) {
-          return Promise.resolve({ result: { ok: true, value: {
-            events: [{ event: { seq: 3, time: 500, type: 'user/message', data: {
-              content: [{ type: 'text', text: 'earlier question' }],
-              source: { kind: 'user' },
-            } } }],
-            hasMore: false,
-          } } })
+const remote = {
+  session: {
+    follow: (payload) => {
+      historyCalls.push({ method: 'follow', payload })
+      return (async function * () {
+        yield {
+          type: 'snapshot',
+          cursor: 11,
+          records: [
+            ...LOG.map(event => ({ type: 'event', event })),
+            // Packed chunk runs are lossless transport records but do not
+            // belong in the assembled transcript.
+            { type: 'chunks', event: {
+              type: 'chunkrow/assistant-text', seq: 10, time: 1250, data: {},
+            } },
+          ],
+          hasMore: true,
         }
-        return Promise.resolve({ result: { ok: true, value: {
-          events: LOG.map(event => ({ event })), hasMore: true,
-        } } })
-      },
+      })()
+    },
+    page: (payload) => {
+      historyCalls.push({ method: 'page', payload })
+      return Promise.resolve({ ok: true, value: {
+        records: [{ type: 'event', event: {
+          seq: 3, time: 500, type: 'user/message', data: {
+            content: [{ type: 'text', text: 'earlier question' }],
+            source: { kind: 'user' },
+          },
+        } }],
+        hasMore: false,
+      } })
     },
   },
 }
@@ -138,10 +151,10 @@ let sessionsTouched = false
 const ctx = {
   effect: (fn) => { fn() },
   get: (name) => {
-    if (name === 'connection') return connection
     if (name === 'sessions') { sessionsTouched = true; return {} }
     return undefined
   },
+  remote,
   locale: {
     register: (ns, dicts) => { localeRegistrations.push([ns, Object.keys(dicts)]); return () => {} },
     bind: () => (key) => key,
@@ -207,8 +220,10 @@ await act(async () => {
 
 assert.deepEqual(
   historyCalls,
-  [{ sessionId: 'session-b', maxMessages: 30 }],
-  'reads that session log through session.history (not sessions.open)',
+  [{ method: 'follow', payload: {
+    address: { kind: 'session', sessionId: 'session-b' }, maxMessages: 30,
+  } }],
+  'opens that session log through session.follow (not sessions.open)',
 )
 
 const reader = document.querySelector('[aria-modal="true"]')
@@ -238,8 +253,12 @@ assert.ok(olderButton, 'offers to page older when hasMore')
 await act(async () => {
   olderButton.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
 })
-assert.deepEqual(historyCalls[1], { sessionId: 'session-b', beforeSeq: 7, maxMessages: 30 },
-  'pages backwards from the window head')
+assert.deepEqual(historyCalls[1], { method: 'page', payload: {
+  address: { kind: 'session', sessionId: 'session-b' },
+  throughSeq: 11,
+  beforeSeq: 7,
+  maxMessages: 30,
+} }, 'pages backwards from the window head against the opening cut')
 assert.match(reader.textContent, /earlier question/, 'prepends the older page')
 assert.equal([...reader.querySelectorAll('button')].filter(b => b.textContent.includes('loadOlder')).length,
   0, 'hides the pager once the log start is reached')
