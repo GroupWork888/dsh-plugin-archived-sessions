@@ -31,11 +31,17 @@
  * not exist upstream (the registry only ever appends, its `setState` is
  * private, and the workspace storage domain is exclusively held).
  */
-import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
+import type { Context as ClientContext } from '@deepseek-ai/cordis'
+// Type-only: pulls the slot registry's Context merge (ctx.slots).
+import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 // Type-only: pulls in the SlotMap merge declaring `sidebar.footer.action`.
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
 // Type-only: pulls in the Context merge providing `ctx.locale`.
 import type {} from '@deepseek-ai/dsh-client-locale/client'
+// Type-only: pulls in the GlobalStandardProps merge for useSessions.
+import type {} from '@deepseek-ai/dsh-client-ui-session/client'
+// Type-only: pulls in the GlobalStandardProps merge for useWorkspaces.
+import type {} from '@deepseek-ai/dsh-client-ui-workspace/client'
 import { ArchivedSessionsPanel } from './ArchivedSessionsPanel.tsx'
 import type { ArchivedPanelFace } from './face.ts'
 import type { HistoryConnection } from './history.ts'
