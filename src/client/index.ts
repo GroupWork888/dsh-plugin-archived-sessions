@@ -1,34 +1,6 @@
-/**
- * Browser half: registers one `sidebar.footer.action` entry that opens a
- * panel listing every archived session, each row opening a read-only
- * transcript of that session's log.
- *
- * Why this works as a plain plugin, with no Host or core changes:
- *
- * - `workspace.list` ships `archivedSessionIds` to the client as ordinary
- *   data, and the session list itself is never filtered — the store "carries
- *   every row" and the sidebar's own derivation is what hides archived ones
- *   at render time. So the rows are already in the browser.
- * - `sidebar.footer.action` is a `list` slot and supplies both `useSessions`
- *   and `useWorkspaces` as standard props, which is exactly the pair this
- *   panel needs to reconstruct those rows.
- * - `session.follow` and `session.page` read the durable log without resuming
- *   or publishing an Agent, so the viewer cannot wake the archived session.
- *
- * Why the transcript is plugin-owned rather than the shell's chat view:
- * `WorkspaceRuntime.project()` clears any current selection contained in
- * `archivedSessionIds`, and it runs on every sessions-store notification —
- * so `sessions.open()` on an archived row is undone before paint. Rendering
- * the log in this plugin's own overlay is the only way to show an archived
- * session without patching the core sweep. (An earlier revision of this
- * plugin called `sessions.open()` and appeared to do nothing when clicked;
- * that is the bug this design fixes.)
- *
- * This plugin is strictly read-only: it never calls `archiveSession`, never
- * changes the current session, and never writes Host state. Restoring a
- * session to the sidebar would require an `unarchiveSession` RPC that does
- * not exist upstream (the registry only ever appends, its `setState` is
- * private, and the workspace storage domain is exclusively held).
+/** Browser entry for an archived-session list and read-only transcript overlay.
+ * Reads the workspace archive set and Session history without unarchiving,
+ * selecting, or prompting a Session. DSH's built-in archive controls remain available.
  */
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 // Type-only: supplies ctx.remote and the generated namespace assembly.

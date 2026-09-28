@@ -1,23 +1,10 @@
-/**
- * Sidebar-foot action listing every archived session, with click-to-read.
- *
- * Data comes entirely from two standard props the `sidebar.footer.action`
- * slot already supplies: `useWorkspaces` carries the registry-global
- * `archivedSessionIds`, and `useSessions` carries the unfiltered session
- * list (the store keeps every row; the sidebar's own derivation is what
- * hides archived ones). Joining them locally reconstructs exactly the rows
- * the browser is refusing to draw — no new Host call, no extra wire traffic.
- *
- * Clicking a row opens a plugin-owned read-only transcript, NOT the shell's
- * conversation view. That is a hard constraint rather than a preference: the
- * core runtime's projection sweep clears any current selection that is in
- * `archivedSessionIds`, so `sessions.open()` on an archived row is reverted
- * before it can paint. See `history.ts` for the full explanation.
+/** Archived-session list joined from the workspace archive set and Session rows.
+ * Selecting a row opens this plugin's read-only reader without changing the main conversation.
  */
 import { useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import {
-  IconArchiveOutline20, IconCloseOutline16, Tooltip,
+  IconArchiveOutlineRegular, IconCloseOutlineRegular, Tooltip,
   useAnchoredPosition, useDismissOnOutsidePointer,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
@@ -134,7 +121,7 @@ export function ArchivedSessionsPanel({
           {...open ? { 'data-active': '' } : {}}
           onClick={() => { setOpen(!open) }}
         >
-          <IconArchiveOutline20 size={wide ? 16 : 18} />
+          <IconArchiveOutlineRegular size={wide ? 16 : 18} />
           {wide ? <span className={css.badgeLabel}>{label}</span> : null}
           {wide && total > 0 ? <span className={css.badgeCount}>{total}</span> : null}
         </button>
@@ -216,7 +203,7 @@ export function ArchivedSessionsPanel({
                 aria-label={t('close')}
                 onClick={() => { setReading(null) }}
               >
-                <IconCloseOutline16 size={14} />
+                <IconCloseOutlineRegular size={14} />
               </button>
             </div>
             <div className={css.readerBody}>

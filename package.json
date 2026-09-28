@@ -1,7 +1,7 @@
 {
   "name": "dsh-plugin-archived-sessions",
   "version": "0.1.0",
-  "description": "Browse and read archived DeepSeek Harness sessions from a sidebar footer panel. Archiving in DSH hides a session from every grouping surface with no way back; this plugin gives those sessions a drawer and a read-only transcript reader. It is a viewer only: it cannot un-archive a session or reopen it in the main chat view, because DSH exposes no unarchive RPC and its client runtime clears any archived session made current.",
+  "description": "Browse archived DeepSeek Harness sessions in a separate read-only transcript reader without restoring them or changing the current conversation.",
   "license": "MIT",
   "type": "module",
   "repository": {

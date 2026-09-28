@@ -1,28 +1,5 @@
-/**
- * Read-only transcript sourcing for archived sessions.
- *
- * Why this exists instead of `sessions.open()`: opening an archived session
- * as the *current* session cannot work from a plugin. `sessions.open(id)`
- * does select it, but `WorkspaceRuntime.project()` — which runs on every
- * sessions-store notification, and `select()` ends by notifying — clears any
- * current selection that is in `archivedSessionIds`:
- *
- *   if (sessions.current !== undefined
- *       && workspace.archivedSessionIds.includes(sessions.current)) this.sessions.clear()
- *
- * So the selection is reverted before React paints and the click looks dead.
- * That sweep is deliberate core behaviour (it is how a session archived in
- * another tab stops being shown), so this plugin does not fight it: it reads
- * the session log directly through the Session Remote and renders the
- * transcript inside its own panel, leaving the shell's current session alone.
- *
- * The RPC is served straight from the durable log — its own contract states
- * that reading history "uses an attached Session or persistence inspection
- * and never resumes or publishes an Agent", which is exactly the guarantee a
- * viewer for archived sessions needs.
- *
- * The Remote and history vocabulary are imported as types only, so they add
- * no browser module-table dependency to the built plugin.
+/** Cold-safe history reads and plain-text transcript projection for archived Sessions.
+ * The Session Remote reads durable history without resuming an Agent.
  */
 
 import type { ClientRemote, SessionId } from '@deepseek-ai/dsh-api-remotes/client'
@@ -41,19 +18,7 @@ export interface HistoryEvent {
 /** Generated Session Remote namespace used for cold-safe history reads. */
 export type HistoryRemote = ClientRemote['session']
 
-/**
- * Messages per page. Deliberately smaller than the shell's own 60-message
- * window: history pages return every raw event, and `assistant/chunk`
- * dominates a real log by roughly 20:1 (one measured tool-heavy session:
- * 6,239 events per 60-message page, 5,917 of them chunks). This viewer folds
- * chunks away, so those bytes are transferred only to be discarded.
- *
- * Measured against that session: 60 messages = 1.7 MB for 109 nodes, while
- * 30 = 0.84 MB for 50 nodes. Loopback hides the difference, but DSH web is
- * routinely reached over Tailscale, where the smaller first page is the
- * difference between an instant reader and a visible stall. Paging older is
- * one click, so the smaller page costs little.
- */
+/** Messages requested per page; older history is loaded on demand. */
 export const PAGE_MESSAGES = 30
 
 /** A rendered transcript line. */

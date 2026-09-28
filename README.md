@@ -2,9 +2,7 @@
 
 Browse and read archived [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) sessions from a sidebar panel.
 
-Archiving a session in DSH hides it from every grouping surface — the workspace tree, the flat list, and search. The session log is kept, but the UI ships no way back: there is no unarchive action, no "show archived" toggle, and no way to reach an archived session once it disappears. This plugin gives those sessions a drawer, and a reader.
-
-> **This is a viewer, not an unarchive button.** Clicking a session opens a read-only transcript inside the panel — it does not restore the session to the sidebar, and it does not reopen it in the main chat view so you can keep talking to it. Both of those need harness changes a plugin cannot make; [the reasons are exact and worth reading](#what-it-deliberately-does-not-do) if you were hoping otherwise.
+DSH provides archived-session filters and an unarchive action. This plugin adds a separate read-only transcript reader that leaves the session archived and preserves the current conversation.
 
 ![The archived-sessions panel, listing archived sessions with a search box](docs/panel.png)
 
@@ -31,38 +29,7 @@ The reader shows human prompts, assistant replies, reasoning, injected context (
 
 ## What it deliberately does not do
 
-### It does not open archived sessions in the main conversation view
-
-This is the one design decision worth reading before forking, because the obvious implementation looks like it works and does not.
-
-`sessions.open(id)` succeeds on an archived id — `manager.select()` validates only that the id is in the list, and archived sessions stay in the list. But the client runtime sweeps the selection away immediately afterwards, in `WorkspaceRuntime.project()`:
-
-```ts
-// packages/client/runtime/src/client/workspaces/service.ts
-if (sessions.current !== undefined
-    && workspace.archivedSessionIds.includes(sessions.current)) {
-  this.sessions.clear()
-}
-```
-
-`project()` runs on every sessions-store notification, and `select()` ends with `notifier.notifyNow()`. So the sequence is: click → select → notify → sweep → clear, all before React paints. **The click looks completely dead.**
-
-That sweep is deliberate core behaviour — it is how the UI drops a session that another tab just archived, and how a reconnect discards a stale persisted selection. It is not a bug to route around from a plugin, and it fires on every projection rather than only on archive events, so no amount of plugin-side sequencing survives it.
-
-So this plugin does not make archived sessions current at all. It reads the durable log through `session.follow` and `session.page`, then renders the transcript in its own overlay. `tests/smoke.mjs` asserts the plugin never touches the sessions service, so this cannot silently regress.
-
-Making archived sessions genuinely openable is a ~5-line upstream change: make the sweep transition-based (clear when the archive set *changes* to include the current session) instead of state-based. That preserves all three documented sweep cases while letting a deliberate open stick.
-
-### It does not restore sessions to the sidebar
-
-Un-archiving needs a host-side write, and every route into that state is sealed to a plugin:
-
-- `WorkspaceRegistry.archiveSession()` only ever appends — there is no removal method
-- its `setState` is private, and the state is written as a whole blob
-- `storageDomain.open('workspace')` throws `already-open`, so a plugin cannot open the domain the registry holds
-- editing `workspace.json` directly is clobbered, because the registry caches state in memory and rewrites the entire blob on its next mutation
-
-Adding real unarchive means an `unarchiveSession` RPC upstream (registry method, API proxy handler, wire schemas, client manager) — a patch to the harness, not a plugin. Notably the rest of the plumbing already exists: the host frame producer watches `domain/changed` and emits `host/archived-sessions-changed`, and the client manager handles it, so a restored session would appear in the sidebar immediately, in its original position.
+The reader uses `session.follow` and `session.page` without making the archived session current, unarchiving it, or sending it a prompt. Use DSH's built-in unarchive action when you want to resume a conversation. The built-artifact smoke test rejects calls to session-mutating services.
 
 Rows whose session has left the session list entirely are shown but disabled: their log may be gone from disk, and the list is the only evidence the client has either way.
 
@@ -77,7 +44,7 @@ So the rows are already sitting in your browser; this plugin draws them, and pag
 
 ### A note on page size
 
-Session history pages return every raw event, and `assistant/chunk` dominates a real log by roughly 20:1 — one measured tool-heavy session returned 6,239 events for a 60-message page, 5,917 of them chunks that this viewer folds away. That is 1.7 MB transferred to render 109 lines. The page size is therefore 30 rather than the shell's 60 (0.84 MB for 50 lines). Loopback hides the difference; a Tailscale-reached web UI does not.
+The reader requests 30 messages per page and loads earlier history on demand. DSH 0.2 embeds compact assistant streams in persisted events; the reader renders assembled assistant messages rather than their stream deltas.
 
 ## Install
 
@@ -111,7 +78,7 @@ To remove it, run `dsh plugin --profile web remove dsh-plugin-archived-sessions`
 ## Requirements
 
 - A DSH `web` profile. The panel is browser-only.
-- Built against the `0.1.2-alpha.1` client packages. The slot contract it uses (`sidebar.footer.action`) is a declared extension seam, but DSH is pre-1.0 and seams may move between releases.
+- Built against the `0.2.0-rc.1` client packages. The slot contract it uses (`sidebar.footer.action`) is a declared extension seam, but DSH is pre-1.0 and seams may move between releases.
 
 ## Develop
 

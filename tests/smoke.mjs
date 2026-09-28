@@ -53,8 +53,8 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true
 
 /** Minimal stand-ins for the primitives the panel actually uses. */
 const primitives = {
-  IconArchiveOutline20: ({ size }) => React.createElement('svg', { 'data-icon': 'archive', width: size }),
-  IconCloseOutline16: ({ size }) => React.createElement('svg', { 'data-icon': 'close', width: size }),
+  IconArchiveOutlineRegular: ({ size }) => React.createElement('svg', { 'data-icon': 'archive', width: size }),
+  IconCloseOutlineRegular: ({ size }) => React.createElement('svg', { 'data-icon': 'close', width: size }),
   Tooltip: ({ children }) => children,
   useAnchoredPosition: () => ({ left: 0, top: 0 }),
   useDismissOnOutsidePointer: () => {},

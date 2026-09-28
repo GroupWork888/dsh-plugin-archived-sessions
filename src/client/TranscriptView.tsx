@@ -1,15 +1,5 @@
-/**
- * Read-only transcript for one archived session, rendered inside the
- * plugin's own modal rather than the shell's conversation view.
- *
- * See `history.ts` for why the main view cannot host an archived session:
- * the core projection sweep clears any archived current selection, so this
- * plugin renders the log itself instead of fighting that rule.
- *
- * This is deliberately a *viewer*: plain text, no markdown rendering, no
- * tool cards, no input. Those live in the shell's conversation packages and
- * reproducing them here would mean vendoring surfaces this plugin does not
- * own — and an archived session has nothing to send to anyway.
+/** Plain-text archived transcript with backwards pagination in a plugin-owned overlay.
+ * Reads history without selecting, resuming, or unarchiving the Session.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { SessionId } from '@deepseek-ai/dsh-api-remotes/client'
