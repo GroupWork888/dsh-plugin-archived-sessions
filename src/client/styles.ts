@@ -126,7 +126,12 @@ const SHEET = `/* Sidebar-foot archived-sessions action and the fixed list it op
 }
 
 /* Fixed so the sidebar's overflow clip cannot cut the surface; the
-   left/bottom offsets are measured from the trigger before paint. */
+   left/bottom offsets are measured from the trigger before paint.
+   Do not use --dsw-specific-menu here: on web that token is a 45–58%
+   glass fill for MenuSurface-backed menus. A 60vh list over the session
+   tree then either bleeds titles (no filter) or reads as a dim sheet
+   (with the shared backdrop filter). An opaque layer fill keeps the
+   original card readable. */
 .dsh-arch-panel {
   position: fixed;
   z-index: 30;
@@ -136,10 +141,11 @@ const SHEET = `/* Sidebar-foot archived-sessions action and the fixed list it op
   max-width: calc(100vw - 24px);
   max-height: 60vh;
   overflow: hidden;
-  border: 1px solid var(--dsw-alias-border-inverted);
+  border: 0;
   border-radius: 12px;
-  background: var(--dsw-specific-menu);
-  box-shadow: var(--dsw-shadow-lv3);
+  background: var(--dsw-alias-bg-layer-1);
+  --dsw-elevation-stroke-color: var(--dsw-alias-border-l1);
+  box-shadow: var(--dsw-elevation-panel);
 }
 
 .dsh-arch-head {
@@ -297,10 +303,11 @@ const SHEET = `/* Sidebar-foot archived-sessions action and the fixed list it op
   width: min(760px, 100%);
   height: min(78vh, 100%);
   overflow: hidden;
-  border: 1px solid var(--dsw-alias-border-inverted);
+  border: 0;
   border-radius: 14px;
-  background: var(--dsw-specific-menu);
-  box-shadow: var(--dsw-shadow-lv3);
+  background: var(--dsw-alias-bg-layer-1);
+  --dsw-elevation-stroke-color: var(--dsw-alias-border-l1);
+  box-shadow: var(--dsw-elevation-prominent);
 }
 
 .dsh-arch-readerHead {
